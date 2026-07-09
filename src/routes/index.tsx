@@ -130,24 +130,29 @@ function Index() {
               <div className="mt-1 text-lg font-bold">{formatCurrency(income)}</div>
             </div>
             <div className="rounded-xl bg-white/10 p-3 backdrop-blur-sm">
-              <div className="flex items-center gap-1.5 text-sm opacity-80">
-                <TrendingDown className="h-4 w-4" />
-                <span>Gastos</span>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-sm opacity-80">
+                  <TrendingDown className="h-4 w-4 shrink-0" />
+                  <span>Gastos</span>
+                </div>
+                {overBudget && (
+                  <div className="flex shrink-0 items-center gap-1 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span>Alerta</span>
+                  </div>
+                )}
               </div>
               <div className="mt-1 text-lg font-bold">{formatCurrency(expense)}</div>
+              {overBudget && (
+                <div className="mt-1 text-[11px] font-semibold text-red-100">
+                  ¡Cuidado con el presupuesto!
+                </div>
+              )}
             </div>
           </div>
         </div>
       </header>
 
-      {overBudget && (
-        <div className="mx-auto max-w-md px-4 pt-3 sm:px-6">
-          <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 shadow-sm dark:border-red-900 dark:bg-red-950 dark:text-red-300">
-            <AlertTriangle className="h-5 w-5 shrink-0" />
-            <span className="text-sm font-semibold">¡Cuidado con el presupuesto!</span>
-          </div>
-        </div>
-      )}
 
       {/* Action Buttons */}
       <div className="mx-auto -mt-5 max-w-md px-4 sm:px-6">

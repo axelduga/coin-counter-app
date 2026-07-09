@@ -12,6 +12,7 @@ export interface Transaction {
 }
 
 const STORAGE_KEY = "daily-expenses-v1";
+const BUDGET_LIMIT_KEY = "daily-expenses-budget-limit";
 
 const DEFAULT_CATEGORIES: Record<TransactionType, string[]> = {
   income: ["Salario", "Freelance", "Inversiones", "Regalo", "Otros"],

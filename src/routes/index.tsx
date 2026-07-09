@@ -108,7 +108,7 @@ function Index() {
     );
   }
 
-  const overBudget = expense > 500000;
+  const overBudget = expense > budgetLimit;
 
   return (
     <div className="min-h-screen bg-background">

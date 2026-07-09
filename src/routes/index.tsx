@@ -69,6 +69,8 @@ function Index() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [newBudgetLimit, setNewBudgetLimit] = useState(String(budgetLimit));
 
   function openModal(type: TransactionType) {
     setModalType(type);

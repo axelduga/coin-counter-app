@@ -102,6 +102,11 @@ export function useTransactions() {
 
   const balance = totals.income - totals.expense;
 
+  const setBudgetLimit = useCallback((limit: number) => {
+    setBudgetLimitState(limit);
+    saveBudgetLimit(limit);
+  }, []);
+
   return {
     transactions: mounted ? transactions : [],
     addTransaction,
@@ -109,6 +114,8 @@ export function useTransactions() {
     income: totals.income,
     expense: totals.expense,
     balance,
+    budgetLimit,
+    setBudgetLimit,
     categories: DEFAULT_CATEGORIES,
     mounted,
   };

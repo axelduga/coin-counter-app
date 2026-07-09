@@ -370,6 +370,67 @@ function Index() {
           </div>
         </div>
       )}
+
+      {/* Budget Limit Modal */}
+      {budgetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setBudgetModalOpen(false)}
+          />
+          <div className="relative z-10 w-full max-w-md rounded-t-2xl bg-card p-5 shadow-2xl sm:rounded-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Configurar alerta de presupuesto</h3>
+              <button
+                onClick={() => setBudgetModalOpen(false)}
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const val = parseInt(newBudgetLimit.replace(/\./g, "").replace(",", ""), 10);
+                if (val && val > 0) {
+                  setBudgetLimit(val);
+                  setBudgetModalOpen(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <Label htmlFor="budgetLimit" className="mb-1.5 block text-sm font-medium">
+                  Límite de gastos (Gs.)
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="budgetLimit"
+                    type="number"
+                    step="1"
+                    min="1"
+                    placeholder="500000"
+                    value={newBudgetLimit}
+                    onChange={(e) => setNewBudgetLimit(e.target.value)}
+                    required
+                    autoFocus
+                    className="h-12 text-lg"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                    Gs.
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Se mostrará una alerta cuando tus gastos superen este monto.
+                </p>
+              </div>
+              <Button type="submit" className="h-12 w-full rounded-xl bg-primary text-base font-bold hover:bg-primary/90">
+                Guardar límite
+              </Button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

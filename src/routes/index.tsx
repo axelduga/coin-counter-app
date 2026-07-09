@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { PlusCircle, ArrowUpRight, ArrowDownRight, Wallet, AlertCircle, Tag, FileText, Coins } from "lucide-react";
+import { PlusCircle, ArrowUpRight, ArrowDownRight, Wallet, AlertCircle, Tag, FileText, Coins, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+// Importaciones para la generación del reporte PDF
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -30,7 +33,6 @@ const CATEGORIES = [
   "Otros",
 ];
 
-// NUEVO: Lista de monedas soportadas con sus respectivos símbolos
 const CURRENCIES = [
   { code: "USD", symbol: "$", label: "Dólar ($)" },
   { code: "EUR", symbol: "€", label: "Euro (€)" },
@@ -46,8 +48,6 @@ function Index() {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [budgetLimit, setBudgetLimit] = useState<number>(500);
-  
-  // NUEVO: Estado para rastrear el símbolo de la moneda seleccionada (por defecto Dólar)
   const [currencySymbol, setCurrencySymbol] = useState("$");
 
   const totalIncome = transactions
@@ -79,7 +79,7 @@ function Index() {
       amount: currentAmount,
       type: transactionType,
       category,
-      date: new Date().toLocaleDateString("es-ES", { day: 'numeric', month: 'short' }),
+      date: new Date().toLocaleDateString("es-ES", { day: 'numeric', month: 'short', year: 'numeric' }),
     };
 
     setTransactions([newTransaction, ...transactions]);
@@ -94,6 +94,64 @@ function Index() {
     }
   };
 
+  // NUEVO: Función para estructurar y descargar el PDF para el contador
+  const exportToPDF = () => {
+    if (transactions.length === 0) {
+      toast.error("No hay movimientos registrados para exportar.");
+      return;
+    }
+
+    const doc = new jsPDF();
+    
+    // Título y Estilos del Encabezado del Reporte
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.text("COINCOUNTER - REPORTE CONTABLE", 14, 20);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Fecha de emisión: ${new Date().toLocaleDateString()}`, 14, 27);
+    
+    // Cuadro de Resumen Financiero
+    doc.setDrawColor(230);
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, 33, 182, 24, "FD");
+    
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30);
+    doc.text("RESUMEN FINANCIERO:", 20, 40);
+    
+    doc.setFont("helvetica", "normal");
+    doc.text(`Ingresos Totales: ${currencySymbol}${totalIncome.toFixed(2)}`, 20, 48);
+    doc.text(`Gastos Totales: ${currencySymbol}${totalExpenses.toFixed(2)}`, 85, 48);
+    doc.text(`Balance Neto: ${currencySymbol}${balance.toFixed(2)}`, 150, 48);
+
+    // Mapeo de transacciones para la tabla limpia del contador
+    const tableRows = transactions.map((t) => [
+      t.date,
+      t.description,
+      t.category,
+      t.type === "income" ? "Ingreso" : "Gasto",
+      `${t.type === "income" ? "+" : "-"}${currencySymbol}${t.amount.toFixed(2)}`
+    ]);
+
+    // Generar tabla auto-formateada
+    autoTable(doc, {
+      startY: 65,
+      head: [["Fecha", "Descripción", "Categoría", "Tipo", "Importe"]],
+      body: tableRows,
+      headStyles: { fillColor: [15, 23, 42], fontStyle: "bold" }, // Estilo Slate-900 profesional
+      alternateRowStyles: { fillColor: [249, 250, 251] },
+      margin: { top: 65 },
+      styles: { font: "helvetica", fontSize: 10 },
+    });
+
+    // Guardar el archivo
+    doc.save(`Balance_Contable_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success("PDF descargado correctamente");
+  };
+
   return (
     <div className={`min-h-screen px-4 py-8 md:py-12 transition-colors duration-500 ${isOverBudget ? 'bg-red-50/40' : 'bg-slate-50/60'}`}>
       <div className="max-w-3xl mx-auto space-y-8">
@@ -105,10 +163,7 @@ function Index() {
             <p className="text-slate-500 mt-1 text-sm md:text-base">Gestiona tus finanzas con claridad y control total</p>
           </div>
           
-          {/* Controles de Configuración (Moneda + Límite) */}
           <div className="flex flex-wrap items-center gap-3 self-start sm:self-center">
-            
-            {/* NUEVO: Selector de Divisa */}
             <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
               <Coins className="h-3.5 w-3.5 text-slate-400" />
               <Select value={currencySymbol} onValueChange={setCurrencySymbol}>
@@ -125,7 +180,6 @@ function Index() {
               </Select>
             </div>
 
-            {/* Ajuste de Límite Mensual */}
             <div className="flex items-center gap-3 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm">
               <Label htmlFor="budget" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Límite:</Label>
               <div className="relative flex items-center">
@@ -139,13 +193,12 @@ function Index() {
                 />
               </div>
             </div>
-
           </div>
         </div>
 
-        {/* Banner de Advertencia Inteligente */}
+        {/* Banner de Advertencia */}
         {isOverBudget && (
-          <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 text-red-900 rounded-2xl shadow-sm transition-all animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 text-red-900 rounded-2xl shadow-sm">
             <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
             <div className="text-sm">
               <span className="font-bold text-red-700">Presupuesto Excedido:</span> Has gastado un total de <span className="font-bold underline decoration-red-400">{currencySymbol}{totalExpenses.toFixed(2)}</span>, superando tu techo establecido de {currencySymbol}{budgetLimit}.
@@ -205,7 +258,6 @@ function Index() {
           </CardHeader>
           <CardContent className="p-6">
             <div className="space-y-5">
-              
               <div className="space-y-2">
                 <Label htmlFor="description" className="text-xs font-bold text-slate-600 tracking-wide flex items-center gap-1.5">
                   <FileText className="h-3.5 w-3.5 text-slate-400" /> Descripción
@@ -270,14 +322,25 @@ function Index() {
                   <ArrowDownRight className="mr-2 h-4 w-4 stroke-[3]" /> Añadir Gasto
                 </Button>
               </div>
-
             </div>
           </CardContent>
         </Card>
 
-        {/* Registro / Historial */}
+        {/* Registro / Historial con Botón de Exportar */}
         <div className="space-y-3">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 pl-1">Movimientos Recientes</h2>
+          <div className="flex items-center justify-between pl-1">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Movimientos Recientes</h2>
+            
+            {/* NUEVO: Botón para descargar el PDF */}
+            <Button
+              onClick={exportToPDF}
+              variant="outline"
+              size="sm"
+              className="h-8 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-lg gap-1.5 text-xs font-semibold"
+            >
+              <Download className="h-3.5 w-3.5" /> Exportar PDF
+            </Button>
+          </div>
           
           <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 subtle-scrollbar">
             {transactions.length === 0 ? (
@@ -323,3 +386,4 @@ function Index() {
     </div>
   );
 }
+

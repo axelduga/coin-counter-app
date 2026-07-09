@@ -103,10 +103,16 @@ function Index() {
     );
   }
 
+  const overBudget = expense > 500000;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header / Balance */}
-      <header className="relative overflow-hidden bg-primary px-4 pb-10 pt-8 text-primary-foreground sm:px-6 lg:px-8">
+      <header
+        className={`relative overflow-hidden px-4 pb-10 pt-8 text-primary-foreground transition-colors duration-500 sm:px-6 lg:px-8 ${
+          overBudget ? "bg-expense" : "bg-primary"
+        }`}
+      >
         <div className="mx-auto max-w-md">
           <div className="mb-1 flex items-center gap-2 opacity-80">
             <Wallet className="h-5 w-5" />

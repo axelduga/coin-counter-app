@@ -57,6 +57,8 @@ function Index() {
     income,
     expense,
     balance,
+    budgetLimit,
+    setBudgetLimit,
     categories,
     mounted,
   } = useTransactions();

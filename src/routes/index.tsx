@@ -130,11 +130,24 @@ function Index() {
               <div className="mt-1 text-lg font-bold">{formatCurrency(income)}</div>
             </div>
             <div className="rounded-xl bg-white/10 p-3 backdrop-blur-sm">
-              <div className="flex items-center gap-1.5 text-sm opacity-80">
-                <TrendingDown className="h-4 w-4" />
-                <span>Gastos</span>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-1.5 text-sm opacity-80">
+                  <TrendingDown className="h-4 w-4 shrink-0" />
+                  <span>Gastos</span>
+                </div>
+                {overBudget && (
+                  <div className="flex shrink-0 items-center gap-1 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                    <AlertTriangle className="h-3 w-3" />
+                    <span>Alerta</span>
+                  </div>
+                )}
               </div>
               <div className="mt-1 text-lg font-bold">{formatCurrency(expense)}</div>
+              {overBudget && (
+                <div className="mt-1 text-[11px] font-semibold text-red-100">
+                  ¡Cuidado con el presupuesto!
+                </div>
+              )}
             </div>
           </div>
         </div>

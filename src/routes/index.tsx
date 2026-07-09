@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
 import { PlusCircle, ArrowUpRight, ArrowDownRight, Wallet, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+
+export const Route = createFileRoute("/")({
+  component: Index,
+});
 
 interface Transaction {
   id: string;
@@ -25,7 +30,7 @@ const CATEGORIES = [
   "Otros",
 ];
 
-export default function Index() {
+function Index() {
   const { toast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [description, setDescription] = useState("");
@@ -33,7 +38,7 @@ export default function Index() {
   const [type, setType] = useState<"income" | "expense">("expense");
   const [category, setCategory] = useState("");
   
-  // NUEVO: Estado para controlar el límite de presupuesto (por defecto $500)
+  // Estado para controlar el límite de presupuesto (por defecto $500)
   const [budgetLimit, setBudgetLimit] = useState<number>(500);
 
   const totalIncome = transactions
@@ -46,7 +51,7 @@ export default function Index() {
 
   const balance = totalIncome - totalExpenses;
 
-  // NUEVO: Variable para saber si nos pasamos del presupuesto
+  // Variable para saber si nos pasamos del presupuesto
   const isOverBudget = totalExpenses > budgetLimit;
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -61,10 +66,12 @@ export default function Index() {
       return;
     }
 
+    const currentAmount = parseFloat(amount);
+
     const newTransaction: Transaction = {
       id: crypto.randomUUID(),
       description,
-      amount: parseFloat(amount),
+      amount: currentAmount,
       type,
       category,
       date: new Date().toLocaleDateString(),
@@ -75,8 +82,8 @@ export default function Index() {
     setAmount("");
     setCategory("");
 
-    // NUEVA ALERTA: Si con esta nueva transacción se supera el límite
-    if (type === "expense" && totalExpenses + parseFloat(amount) > budgetLimit) {
+    // ALERTA: Si con esta nueva transacción se supera el límite
+    if (type === "expense" && totalExpenses + currentAmount > budgetLimit) {
       toast({
         title: "⚠️ ¡Alerta de Presupuesto!",
         description: `Has superado tu límite de gastos mensual de $${budgetLimit}`,
@@ -99,7 +106,7 @@ export default function Index() {
             <p className="text-muted-foreground">Gestiona tus finanzas de forma simple</p>
           </div>
           
-          {/* NUEVO: Control para ajustar el límite de presupuesto */}
+          {/* Control para ajustar el límite de presupuesto */}
           <div className="flex items-center gap-3 bg-white p-2 rounded-lg border shadow-sm">
             <Label htmlFor="budget" className="text-xs font-semibold text-gray-600 uppercase">Límite Gastos:</Label>
             <Input
@@ -112,7 +119,7 @@ export default function Index() {
           </div>
         </div>
 
-        {/* NUEVO BANNER DE ADVERTENCIA: Solo aparece si estás excedido */}
+        {/* BANNER DE ADVERTENCIA: Solo aparece si estás excedido */}
         {isOverBudget && (
           <div className="flex items-center gap-3 p-4 bg-red-100 border border-red-200 text-red-800 rounded-xl shadow-sm animate-pulse">
             <AlertCircle className="h-5 w-5 shrink-0" />
@@ -262,4 +269,3 @@ export default function Index() {
     </div>
   );
 }
-Añadida alerta de presupuesto

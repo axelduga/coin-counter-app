@@ -44,6 +44,21 @@ function saveTransactions(txs: Transaction[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(txs));
 }
 
+function loadBudgetLimit(): number {
+  if (typeof window === "undefined") return 500000;
+  try {
+    const raw = localStorage.getItem(BUDGET_LIMIT_KEY);
+    return raw ? parseInt(raw, 10) || 500000 : 500000;
+  } catch {
+    return 500000;
+  }
+}
+
+function saveBudgetLimit(limit: number) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(BUDGET_LIMIT_KEY, String(limit));
+}
+
 export function useTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>(loadTransactions);
   const [mounted, setMounted] = useState(false);

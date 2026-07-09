@@ -12,6 +12,7 @@ export interface Transaction {
 }
 
 const STORAGE_KEY = "daily-expenses-v1";
+const BUDGET_LIMIT_KEY = "daily-expenses-budget-limit";
 
 const DEFAULT_CATEGORIES: Record<TransactionType, string[]> = {
   income: ["Salario", "Freelance", "Inversiones", "Regalo", "Otros"],
@@ -43,8 +44,24 @@ function saveTransactions(txs: Transaction[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(txs));
 }
 
+function loadBudgetLimit(): number {
+  if (typeof window === "undefined") return 500000;
+  try {
+    const raw = localStorage.getItem(BUDGET_LIMIT_KEY);
+    return raw ? parseInt(raw, 10) || 500000 : 500000;
+  } catch {
+    return 500000;
+  }
+}
+
+function saveBudgetLimit(limit: number) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(BUDGET_LIMIT_KEY, String(limit));
+}
+
 export function useTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>(loadTransactions);
+  const [budgetLimit, setBudgetLimitState] = useState<number>(loadBudgetLimit);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -85,6 +102,11 @@ export function useTransactions() {
 
   const balance = totals.income - totals.expense;
 
+  const setBudgetLimit = useCallback((limit: number) => {
+    setBudgetLimitState(limit);
+    saveBudgetLimit(limit);
+  }, []);
+
   return {
     transactions: mounted ? transactions : [],
     addTransaction,
@@ -92,6 +114,8 @@ export function useTransactions() {
     income: totals.income,
     expense: totals.expense,
     balance,
+    budgetLimit,
+    setBudgetLimit,
     categories: DEFAULT_CATEGORIES,
     mounted,
   };

@@ -11,6 +11,7 @@ import {
   TrendingDown,
   X,
   ChevronDown,
+  Settings,
 } from "lucide-react";
 import { useTransactions, type TransactionType } from "@/hooks/use-transactions";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,8 @@ function Index() {
     income,
     expense,
     balance,
+    budgetLimit,
+    setBudgetLimit,
     categories,
     mounted,
   } = useTransactions();
@@ -66,6 +69,8 @@ function Index() {
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [newBudgetLimit, setNewBudgetLimit] = useState(String(budgetLimit));
 
   function openModal(type: TransactionType) {
     setModalType(type);
@@ -103,7 +108,7 @@ function Index() {
     );
   }
 
-  const overBudget = expense > 500000;
+  const overBudget = expense > budgetLimit;
 
   return (
     <div className="min-h-screen bg-background">
@@ -134,6 +139,17 @@ function Index() {
                 <div className="flex items-center gap-1.5 text-sm opacity-80">
                   <TrendingDown className="h-4 w-4 shrink-0" />
                   <span>Gastos</span>
+                  <button
+                    onClick={() => {
+                      setNewBudgetLimit(String(budgetLimit));
+                      setBudgetModalOpen(true);
+                    }}
+                    className="ml-1 rounded p-0.5 text-white/60 hover:bg-white/20 hover:text-white"
+                    aria-label="Configurar presupuesto"
+                    title="Configurar presupuesto"
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                  </button>
                 </div>
                 {overBudget && (
                   <div className="flex shrink-0 items-center gap-1 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold text-white">
@@ -349,6 +365,67 @@ function Index() {
                 }`}
               >
                 {modalType === "income" ? "Registrar Ingreso" : "Registrar Gasto"}
+              </Button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Budget Limit Modal */}
+      {budgetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setBudgetModalOpen(false)}
+          />
+          <div className="relative z-10 w-full max-w-md rounded-t-2xl bg-card p-5 shadow-2xl sm:rounded-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-foreground">Configurar alerta de presupuesto</h3>
+              <button
+                onClick={() => setBudgetModalOpen(false)}
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const val = parseInt(newBudgetLimit.replace(/\./g, "").replace(",", ""), 10);
+                if (val && val > 0) {
+                  setBudgetLimit(val);
+                  setBudgetModalOpen(false);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <Label htmlFor="budgetLimit" className="mb-1.5 block text-sm font-medium">
+                  Límite de gastos (Gs.)
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="budgetLimit"
+                    type="number"
+                    step="1"
+                    min="1"
+                    placeholder="500000"
+                    value={newBudgetLimit}
+                    onChange={(e) => setNewBudgetLimit(e.target.value)}
+                    required
+                    autoFocus
+                    className="h-12 text-lg"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                    Gs.
+                  </span>
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  Se mostrará una alerta cuando tus gastos superen este monto.
+                </p>
+              </div>
+              <Button type="submit" className="h-12 w-full rounded-xl bg-primary text-base font-bold hover:bg-primary/90">
+                Guardar límite
               </Button>
             </form>
           </div>

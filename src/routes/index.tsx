@@ -139,6 +139,17 @@ function Index() {
                 <div className="flex items-center gap-1.5 text-sm opacity-80">
                   <TrendingDown className="h-4 w-4 shrink-0" />
                   <span>Gastos</span>
+                  <button
+                    onClick={() => {
+                      setNewBudgetLimit(String(budgetLimit));
+                      setBudgetModalOpen(true);
+                    }}
+                    className="ml-1 rounded p-0.5 text-white/60 hover:bg-white/20 hover:text-white"
+                    aria-label="Configurar presupuesto"
+                    title="Configurar presupuesto"
+                  >
+                    <Settings className="h-3.5 w-3.5" />
+                  </button>
                 </div>
                 {overBudget && (
                   <div className="flex shrink-0 items-center gap-1 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold text-white">

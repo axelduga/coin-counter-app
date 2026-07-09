@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-// Importaciones para la generación del reporte PDF
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -94,7 +93,6 @@ function Index() {
     }
   };
 
-  // NUEVO: Función para estructurar y descargar el PDF para el contador
   const exportToPDF = () => {
     if (transactions.length === 0) {
       toast.error("No hay movimientos registrados para exportar.");
@@ -103,7 +101,6 @@ function Index() {
 
     const doc = new jsPDF();
     
-    // Título y Estilos del Encabezado del Reporte
     doc.setFont("helvetica", "bold");
     doc.setFontSize(20);
     doc.text("COINCOUNTER - REPORTE CONTABLE", 14, 20);
@@ -113,7 +110,6 @@ function Index() {
     doc.setTextColor(100);
     doc.text(`Fecha de emisión: ${new Date().toLocaleDateString()}`, 14, 27);
     
-    // Cuadro de Resumen Financiero
     doc.setDrawColor(230);
     doc.setFillColor(248, 250, 252);
     doc.rect(14, 33, 182, 24, "FD");
@@ -127,7 +123,6 @@ function Index() {
     doc.text(`Gastos Totales: ${currencySymbol}${totalExpenses.toFixed(2)}`, 85, 48);
     doc.text(`Balance Neto: ${currencySymbol}${balance.toFixed(2)}`, 150, 48);
 
-    // Mapeo de transacciones para la tabla limpia del contador
     const tableRows = transactions.map((t) => [
       t.date,
       t.description,
@@ -136,18 +131,16 @@ function Index() {
       `${t.type === "income" ? "+" : "-"}${currencySymbol}${t.amount.toFixed(2)}`
     ]);
 
-    // Generar tabla auto-formateada
     autoTable(doc, {
       startY: 65,
       head: [["Fecha", "Descripción", "Categoría", "Tipo", "Importe"]],
       body: tableRows,
-      headStyles: { fillColor: [15, 23, 42], fontStyle: "bold" }, // Estilo Slate-900 profesional
+      headStyles: { fillColor: [15, 23, 42], fontStyle: "bold" },
       alternateRowStyles: { fillColor: [249, 250, 251] },
       margin: { top: 65 },
       styles: { font: "helvetica", fontSize: 10 },
     });
 
-    // Guardar el archivo
     doc.save(`Balance_Contable_${new Date().toISOString().split('T')[0]}.pdf`);
     toast.success("PDF descargado correctamente");
   };
@@ -156,7 +149,6 @@ function Index() {
     <div className={`min-h-screen px-4 py-8 md:py-12 transition-colors duration-500 ${isOverBudget ? 'bg-red-50/40' : 'bg-slate-50/60'}`}>
       <div className="max-w-3xl mx-auto space-y-8">
         
-        {/* Cabecera Principal */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-6 border-slate-200">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">CoinCounter</h1>
@@ -196,7 +188,6 @@ function Index() {
           </div>
         </div>
 
-        {/* Banner de Advertencia */}
         {isOverBudget && (
           <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 text-red-900 rounded-2xl shadow-sm">
             <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
@@ -206,7 +197,6 @@ function Index() {
           </div>
         )}
 
-        {/* Tarjetas de Indicadores */}
         <div className="grid gap-4 sm:grid-cols-3">
           <Card className="border-slate-200/80 shadow-sm bg-white">
             <CardContent className="p-6">
@@ -251,7 +241,6 @@ function Index() {
           </Card>
         </div>
 
-        {/* Formulario Nueva Operación */}
         <Card className="border-slate-200/80 shadow-md bg-white rounded-2xl overflow-hidden">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 px-6 py-4">
             <CardTitle className="text-base font-bold text-slate-800">Nueva Operación</CardTitle>
@@ -326,12 +315,9 @@ function Index() {
           </CardContent>
         </Card>
 
-        {/* Registro / Historial con Botón de Exportar */}
         <div className="space-y-3">
           <div className="flex items-center justify-between pl-1">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Movimientos Recientes</h2>
-            
-            {/* NUEVO: Botón para descargar el PDF */}
             <Button
               onClick={exportToPDF}
               variant="outline"
@@ -353,7 +339,7 @@ function Index() {
               transactions.map((t) => (
                 <div
                   key={t.id}
-                  className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:border-slate-200 transition-all group animate-in fade-in-50 duration-200"
+                  className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:border-slate-200 transition-all group"
                 >
                   <div className="flex items-center gap-3.5">
                     <div className={`p-2 rounded-xl shrink-0 ${
@@ -386,4 +372,3 @@ function Index() {
     </div>
   );
 }
-

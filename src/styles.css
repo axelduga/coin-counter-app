@@ -100,6 +100,11 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
+  --income: oklch(0.62 0.15 145);
+  --income-muted: oklch(0.95 0.03 145);
+  --expense: oklch(0.55 0.2 25);
+  --expense-muted: oklch(0.95 0.03 25);
+  --font-sans: 'Outfit', system-ui, sans-serif;
 }
 
 .dark {

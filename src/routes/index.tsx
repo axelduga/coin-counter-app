@@ -11,6 +11,8 @@ import {
   TrendingDown,
   X,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Settings,
 } from "lucide-react";
 import { useTransactions, type TransactionType } from "@/hooks/use-transactions";

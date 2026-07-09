@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { PlusCircle, ArrowUpRight, ArrowDownRight, Wallet, AlertCircle, Tag, FileText, DollarSign } from "lucide-react";
+import { PlusCircle, ArrowUpRight, ArrowDownRight, Wallet, AlertCircle, Tag, FileText, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,12 +30,25 @@ const CATEGORIES = [
   "Otros",
 ];
 
+// NUEVO: Lista de monedas soportadas con sus respectivos símbolos
+const CURRENCIES = [
+  { code: "USD", symbol: "$", label: "Dólar ($)" },
+  { code: "EUR", symbol: "€", label: "Euro (€)" },
+  { code: "GBP", symbol: "£", label: "Libra (£)" },
+  { code: "PYG", symbol: "Gs. ", label: "Guaraní (Gs.)" },
+  { code: "MXN", symbol: "MX$", label: "Peso Mex (MX$)" },
+  { code: "ARS", symbol: "AR$", label: "Peso Arg (AR$)" },
+];
+
 function Index() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [budgetLimit, setBudgetLimit] = useState<number>(500);
+  
+  // NUEVO: Estado para rastrear el símbolo de la moneda seleccionada (por defecto Dólar)
+  const [currencySymbol, setCurrencySymbol] = useState("$");
 
   const totalIncome = transactions
     .filter((t) => t.type === "income")
@@ -48,7 +61,6 @@ function Index() {
   const balance = totalIncome - totalExpenses;
   const isOverBudget = totalExpenses > budgetLimit;
 
-  // Función unificada que recibe directamente el tipo de transacción desde el botón presionado
   const handleAddTransaction = (transactionType: "income" | "expense") => {
     if (!description || !amount || !category) {
       toast.error("Por favor, completa la descripción, el monto y la categoría.");
@@ -76,7 +88,7 @@ function Index() {
     setCategory("");
 
     if (transactionType === "expense" && totalExpenses + currentAmount > budgetLimit) {
-      toast.error(`⚠️ ¡Alerta de Presupuesto! Has superado tu límite mensual de $${budgetLimit}`);
+      toast.error(`⚠️ ¡Alerta de Presupuesto! Has superado tu límite mensual de ${currencySymbol}${budgetLimit}`);
     } else {
       toast.success(transactionType === "income" ? "Ingreso registrado" : "Gasto registrado");
     }
@@ -93,18 +105,41 @@ function Index() {
             <p className="text-slate-500 mt-1 text-sm md:text-base">Gestiona tus finanzas con claridad y control total</p>
           </div>
           
-          <div className="flex items-center gap-3 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm self-start sm:self-center">
-            <Label htmlFor="budget" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Límite Mensual:</Label>
-            <div className="relative flex items-center">
-              <span className="absolute left-2.5 text-slate-400 text-sm">$</span>
-              <Input
-                id="budget"
-                type="number"
-                value={budgetLimit}
-                onChange={(e) => setBudgetLimit(Number(e.target.value) || 0)}
-                className="w-24 h-8 pl-6 text-right font-semibold text-slate-700 bg-slate-50/50 border-slate-200 focus-visible:ring-slate-400"
-              />
+          {/* Controles de Configuración (Moneda + Límite) */}
+          <div className="flex flex-wrap items-center gap-3 self-start sm:self-center">
+            
+            {/* NUEVO: Selector de Divisa */}
+            <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+              <Coins className="h-3.5 w-3.5 text-slate-400" />
+              <Select value={currencySymbol} onValueChange={setCurrencySymbol}>
+                <SelectTrigger className="border-0 focus:ring-0 h-7 w-[110px] p-0 font-semibold text-slate-700 bg-transparent text-xs uppercase tracking-wider">
+                  <SelectValue placeholder="Moneda" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((cur) => (
+                    <SelectItem key={cur.code} value={cur.symbol} className="text-xs">
+                      {cur.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Ajuste de Límite Mensual */}
+            <div className="flex items-center gap-3 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm">
+              <Label htmlFor="budget" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Límite:</Label>
+              <div className="relative flex items-center">
+                <span className="absolute left-1 text-slate-400 text-xs font-bold">{currencySymbol}</span>
+                <Input
+                  id="budget"
+                  type="number"
+                  value={budgetLimit}
+                  onChange={(e) => setBudgetLimit(Number(e.target.value) || 0)}
+                  className="w-20 h-7 pl-5 pr-1 text-right font-semibold text-slate-700 bg-slate-50/50 border-slate-200 focus-visible:ring-slate-400 text-xs"
+                />
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -113,14 +148,14 @@ function Index() {
           <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 text-red-900 rounded-2xl shadow-sm transition-all animate-in fade-in slide-in-from-top-2">
             <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
             <div className="text-sm">
-              <span className="font-bold text-red-700">Presupuesto Excedido:</span> Has gastado un total de <span className="font-bold underline decoration-red-400">${totalExpenses.toFixed(2)}</span>, superando tu techo establecido de ${budgetLimit}.
+              <span className="font-bold text-red-700">Presupuesto Excedido:</span> Has gastado un total de <span className="font-bold underline decoration-red-400">{currencySymbol}{totalExpenses.toFixed(2)}</span>, superando tu techo establecido de {currencySymbol}{budgetLimit}.
             </div>
           </div>
         )}
 
         {/* Tarjetas de Indicadores */}
         <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="border-slate-200/80 shadow-sm overflow-hidden bg-white">
+          <Card className="border-slate-200/80 shadow-sm bg-white">
             <CardContent className="p-6">
               <div className="flex items-center justify-between space-y-0 pb-1">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Balance Disponible</p>
@@ -129,12 +164,12 @@ function Index() {
                 </div>
               </div>
               <div className={`text-2xl font-black mt-2 tracking-tight ${balance >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
-                ${balance.toFixed(2)}
+                {currencySymbol}{balance.toFixed(2)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200/80 shadow-sm overflow-hidden bg-white">
+          <Card className="border-slate-200/80 shadow-sm bg-white">
             <CardContent className="p-6">
               <div className="flex items-center justify-between space-y-0 pb-1">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Ingresos</p>
@@ -143,12 +178,12 @@ function Index() {
                 </div>
               </div>
               <div className="text-2xl font-black mt-2 tracking-tight text-emerald-600">
-                +${totalIncome.toFixed(2)}
+                +{currencySymbol}{totalIncome.toFixed(2)}
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-slate-200/80 shadow-sm overflow-hidden bg-white">
+          <Card className="border-slate-200/80 shadow-sm bg-white">
             <CardContent className="p-6">
               <div className="flex items-center justify-between space-y-0 pb-1">
                 <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Gastos</p>
@@ -157,13 +192,13 @@ function Index() {
                 </div>
               </div>
               <div className="text-2xl font-black mt-2 tracking-tight text-rose-600">
-                -${totalExpenses.toFixed(2)}
+                -{currencySymbol}{totalExpenses.toFixed(2)}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Nueva Sección de Entrada de Datos Estilizada */}
+        {/* Formulario Nueva Operación */}
         <Card className="border-slate-200/80 shadow-md bg-white rounded-2xl overflow-hidden">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100 px-6 py-4">
             <CardTitle className="text-base font-bold text-slate-800">Nueva Operación</CardTitle>
@@ -171,7 +206,6 @@ function Index() {
           <CardContent className="p-6">
             <div className="space-y-5">
               
-              {/* Fila superior: Descripción */}
               <div className="space-y-2">
                 <Label htmlFor="description" className="text-xs font-bold text-slate-600 tracking-wide flex items-center gap-1.5">
                   <FileText className="h-3.5 w-3.5 text-slate-400" /> Descripción
@@ -185,11 +219,10 @@ function Index() {
                 />
               </div>
 
-              {/* Fila intermedia: Monto y Categoría */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="amount" className="text-xs font-bold text-slate-600 tracking-wide flex items-center gap-1.5">
-                    <DollarSign className="h-3.5 w-3.5 text-slate-400" /> Importe ($)
+                    <span className="text-slate-400 font-bold text-xs">{currencySymbol}</span> Importe
                   </Label>
                   <Input
                     id="amount"
@@ -220,12 +253,11 @@ function Index() {
                 </div>
               </div>
 
-              {/* Botones de acción directa requeridos */}
               <div className="grid gap-3 pt-2 sm:grid-cols-2">
                 <Button 
                   type="button" 
                   onClick={() => handleAddTransaction("income")}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-11 rounded-xl transition-all shadow-sm hover:shadow active:scale-[0.99]"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-11 rounded-xl transition-all shadow-sm active:scale-[0.99]"
                 >
                   <ArrowUpRight className="mr-2 h-4 w-4 stroke-[3]" /> Añadir Ingreso
                 </Button>
@@ -233,7 +265,7 @@ function Index() {
                 <Button 
                   type="button" 
                   onClick={() => handleAddTransaction("expense")}
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-semibold h-11 rounded-xl transition-all shadow-sm hover:shadow active:scale-[0.99]"
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-semibold h-11 rounded-xl transition-all shadow-sm active:scale-[0.99]"
                 >
                   <ArrowDownRight className="mr-2 h-4 w-4 stroke-[3]" /> Añadir Gasto
                 </Button>
@@ -243,7 +275,7 @@ function Index() {
           </CardContent>
         </Card>
 
-        {/* Sección de Registro / Historial */}
+        {/* Registro / Historial */}
         <div className="space-y-3">
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 pl-1">Movimientos Recientes</h2>
           
@@ -279,7 +311,7 @@ function Index() {
                   <div className={`text-sm font-bold tracking-tight ${
                     t.type === "income" ? "text-emerald-600" : "text-slate-900"
                   }`}>
-                    {t.type === "income" ? "+" : "-"}${t.amount.toFixed(2)}
+                    {t.type === "income" ? "+" : "-"}{currencySymbol}{t.amount.toFixed(2)}
                   </div>
                 </div>
               ))

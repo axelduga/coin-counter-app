@@ -11,6 +11,8 @@ import {
   TrendingDown,
   X,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Settings,
 } from "lucide-react";
 import { useTransactions, type TransactionType } from "@/hooks/use-transactions";
@@ -71,6 +73,9 @@ function Index() {
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [newBudgetLimit, setNewBudgetLimit] = useState(String(budgetLimit));
+  const now = new Date();
+  const [calendarYear, setCalendarYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(now.getMonth());
 
   function openModal(type: TransactionType) {
     setModalType(type);
@@ -189,6 +194,156 @@ function Index() {
           </Button>
         </div>
       </div>
+
+      {/* Monthly Balance Calendar */}
+      {(() => {
+        const MONTHS = [
+          "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+          "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+        ];
+        const MONTHS_FULL = [
+          "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+          "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+        ];
+        const monthly = Array.from({ length: 12 }, () => ({ income: 0, expense: 0 }));
+        for (const t of transactions) {
+          const d = new Date(t.date);
+          if (d.getFullYear() !== calendarYear) continue;
+          const m = d.getMonth();
+          if (t.type === "income") monthly[m].income += t.amount;
+          else monthly[m].expense += t.amount;
+        }
+        const selected = selectedMonth !== null ? monthly[selectedMonth] : null;
+        const selectedTxs = selectedMonth !== null
+          ? transactions.filter((t) => {
+              const d = new Date(t.date);
+              return d.getFullYear() === calendarYear && d.getMonth() === selectedMonth;
+            })
+          : [];
+        return (
+          <section className="mx-auto mt-6 max-w-md px-4 sm:px-6">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Balance mensual
+              </h2>
+              <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setCalendarYear((y) => y - 1)}
+                  className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                  aria-label="Año anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="min-w-[3rem] text-center text-sm font-semibold text-foreground">
+                  {calendarYear}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCalendarYear((y) => y + 1)}
+                  className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                  aria-label="Año siguiente"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-card p-3 sm:grid-cols-4">
+              {monthly.map((m, i) => {
+                const bal = m.income - m.expense;
+                const hasData = m.income > 0 || m.expense > 0;
+                const isSelected = selectedMonth === i;
+                const isCurrent =
+                  calendarYear === now.getFullYear() && i === now.getMonth();
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSelectedMonth(isSelected ? null : i)}
+                    className={`flex flex-col items-start rounded-xl border p-2 text-left transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/10 shadow-sm"
+                        : "border-border bg-background hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="flex w-full items-center justify-between">
+                      <span className="text-xs font-semibold text-foreground">
+                        {MONTHS[i]}
+                      </span>
+                      {isCurrent && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      )}
+                    </div>
+                    {hasData ? (
+                      <span
+                        className={`mt-1 text-[11px] font-bold leading-tight ${
+                          bal >= 0 ? "text-income" : "text-expense"
+                        }`}
+                      >
+                        {bal >= 0 ? "+" : "−"}
+                        {formatCurrency(Math.abs(bal))}
+                      </span>
+                    ) : (
+                      <span className="mt-1 text-[11px] text-muted-foreground/60">
+                        Sin datos
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {selected && selectedMonth !== null && (
+              <div className="mt-3 rounded-2xl border border-border bg-card p-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-base font-bold text-foreground">
+                    {MONTHS_FULL[selectedMonth]} {calendarYear}
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedTxs.length} mov.
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-lg bg-income-muted p-2">
+                    <div className="flex items-center gap-1 text-[11px] text-income">
+                      <TrendingUp className="h-3 w-3" />
+                      <span>Ingresos</span>
+                    </div>
+                    <div className="mt-0.5 text-sm font-bold text-foreground">
+                      {formatCurrency(selected.income)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-expense-muted p-2">
+                    <div className="flex items-center gap-1 text-[11px] text-expense">
+                      <TrendingDown className="h-3 w-3" />
+                      <span>Gastos</span>
+                    </div>
+                    <div className="mt-0.5 text-sm font-bold text-foreground">
+                      {formatCurrency(selected.expense)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg bg-muted p-2">
+                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Wallet className="h-3 w-3" />
+                      <span>Balance</span>
+                    </div>
+                    <div
+                      className={`mt-0.5 text-sm font-bold ${
+                        selected.income - selected.expense >= 0
+                          ? "text-income"
+                          : "text-expense"
+                      }`}
+                    >
+                      {formatCurrency(selected.income - selected.expense)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+        );
+      })()}
 
       {/* Expense Breakdown by Category */}
       {(() => {

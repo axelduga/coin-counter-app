@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import {
+  AlertTriangle,
   ArrowDownLeft,
   ArrowUpRight,
   Plus,
@@ -102,10 +103,16 @@ function Index() {
     );
   }
 
+  const overBudget = expense > 500000;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header / Balance */}
-      <header className="relative overflow-hidden bg-primary px-4 pb-10 pt-8 text-primary-foreground sm:px-6 lg:px-8">
+      <header
+        className={`relative overflow-hidden px-4 pb-10 pt-8 text-primary-foreground transition-colors duration-500 sm:px-6 lg:px-8 ${
+          overBudget ? "bg-expense" : "bg-primary"
+        }`}
+      >
         <div className="mx-auto max-w-md">
           <div className="mb-1 flex items-center gap-2 opacity-80">
             <Wallet className="h-5 w-5" />
@@ -132,6 +139,15 @@ function Index() {
           </div>
         </div>
       </header>
+
+      {overBudget && (
+        <div className="mx-auto max-w-md px-4 pt-3 sm:px-6">
+          <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 shadow-sm dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <span className="text-sm font-semibold">¡Cuidado con el presupuesto!</span>
+          </div>
+        </div>
+      )}
 
       {/* Action Buttons */}
       <div className="mx-auto -mt-5 max-w-md px-4 sm:px-6">

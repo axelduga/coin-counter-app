@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { PlusCircle, ArrowUpRight, ArrowDownRight, Wallet, AlertCircle } from "lucide-react";
+import { PlusCircle, ArrowUpRight, ArrowDownRight, Wallet, AlertCircle, Tag, FileText, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// CAMBIO: Ahora usamos Sonner (toast) que ya está instalado en tu app
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -35,10 +34,7 @@ function Index() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [type, setType] = useState<"income" | "expense">("expense");
   const [category, setCategory] = useState("");
-  
-  // Estado para controlar el límite de presupuesto (por defecto $500)
   const [budgetLimit, setBudgetLimit] = useState<number>(500);
 
   const totalIncome = transactions
@@ -50,27 +46,28 @@ function Index() {
     .reduce((acc, t) => acc + t.amount, 0);
 
   const balance = totalIncome - totalExpenses;
-
-  // Variable para saber si nos pasamos del presupuesto
   const isOverBudget = totalExpenses > budgetLimit;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
+  // Función unificada que recibe directamente el tipo de transacción desde el botón presionado
+  const handleAddTransaction = (transactionType: "income" | "expense") => {
     if (!description || !amount || !category) {
-      toast.error("Por favor completa todos los campos");
+      toast.error("Por favor, completa la descripción, el monto y la categoría.");
       return;
     }
 
     const currentAmount = parseFloat(amount);
+    if (isNaN(currentAmount) || currentAmount <= 0) {
+      toast.error("Por favor, ingresa un monto válido mayor a 0.");
+      return;
+    }
 
     const newTransaction: Transaction = {
       id: crypto.randomUUID(),
       description,
       amount: currentAmount,
-      type,
+      type: transactionType,
       category,
-      date: new Date().toLocaleDateString(),
+      date: new Date().toLocaleDateString("es-ES", { day: 'numeric', month: 'short' }),
     };
 
     setTransactions([newTransaction, ...transactions]);
@@ -78,128 +75,139 @@ function Index() {
     setAmount("");
     setCategory("");
 
-    // ALERTA REVISADA CON SONNER
-    if (type === "expense" && totalExpenses + currentAmount > budgetLimit) {
+    if (transactionType === "expense" && totalExpenses + currentAmount > budgetLimit) {
       toast.error(`⚠️ ¡Alerta de Presupuesto! Has superado tu límite mensual de $${budgetLimit}`);
     } else {
-      toast.success("Transacción agregada correctamente");
+      toast.success(transactionType === "income" ? "Ingreso registrado" : "Gasto registrado");
     }
   };
 
   return (
-    <div className={`min-h-screen p-6 transition-colors duration-500 ${isOverBudget ? 'bg-red-50/50' : 'bg-gray-50/50'}`}>
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className={`min-h-screen px-4 py-8 md:py-12 transition-colors duration-500 ${isOverBudget ? 'bg-red-50/40' : 'bg-slate-50/60'}`}>
+      <div className="max-w-3xl mx-auto space-y-8">
+        
+        {/* Cabecera Principal */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-6 border-slate-200">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900">CoinCounter</h1>
-            <p className="text-muted-foreground">Gestiona tus finanzas de forma simple</p>
+            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">CoinCounter</h1>
+            <p className="text-slate-500 mt-1 text-sm md:text-base">Gestiona tus finanzas con claridad y control total</p>
           </div>
           
-          {/* Control para ajustar el límite de presupuesto */}
-          <div className="flex items-center gap-3 bg-white p-2 rounded-lg border shadow-sm">
-            <Label htmlFor="budget" className="text-xs font-semibold text-gray-600 uppercase">Límite Gastos:</Label>
-            <Input
-              id="budget"
-              type="number"
-              value={budgetLimit}
-              onChange={(e) => setBudgetLimit(Number(e.target.value) || 0)}
-              className="w-24 h-8 text-right font-medium"
-            />
+          <div className="flex items-center gap-3 bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-sm self-start sm:self-center">
+            <Label htmlFor="budget" className="text-xs font-bold text-slate-500 uppercase tracking-wider">Límite Mensual:</Label>
+            <div className="relative flex items-center">
+              <span className="absolute left-2.5 text-slate-400 text-sm">$</span>
+              <Input
+                id="budget"
+                type="number"
+                value={budgetLimit}
+                onChange={(e) => setBudgetLimit(Number(e.target.value) || 0)}
+                className="w-24 h-8 pl-6 text-right font-semibold text-slate-700 bg-slate-50/50 border-slate-200 focus-visible:ring-slate-400"
+              />
+            </div>
           </div>
         </div>
 
-        {/* BANNER DE ADVERTENCIA: Solo aparece si estás excedido */}
+        {/* Banner de Advertencia Inteligente */}
         {isOverBudget && (
-          <div className="flex items-center gap-3 p-4 bg-red-100 border border-red-200 text-red-800 rounded-xl shadow-sm animate-pulse">
-            <AlertCircle className="h-5 w-5 shrink-0" />
-            <div>
-              <span className="font-bold">¡Atención!</span> Has gastado <span className="font-bold">${totalExpenses}</span>, superando tu límite establecido de ${budgetLimit}.
+          <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 text-red-900 rounded-2xl shadow-sm transition-all animate-in fade-in slide-in-from-top-2">
+            <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 shrink-0" />
+            <div className="text-sm">
+              <span className="font-bold text-red-700">Presupuesto Excedido:</span> Has gastado un total de <span className="font-bold underline decoration-red-400">${totalExpenses.toFixed(2)}</span>, superando tu techo establecido de ${budgetLimit}.
             </div>
           </div>
         )}
 
-        {/* Tarjetas de Resumen */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Balance Total</CardTitle>
-              <Wallet className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+        {/* Tarjetas de Indicadores */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card className="border-slate-200/80 shadow-sm overflow-hidden bg-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between space-y-0 pb-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Balance Disponible</p>
+                <div className={`p-2 rounded-lg ${balance >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                  <Wallet className="h-4 w-4" />
+                </div>
+              </div>
+              <div className={`text-2xl font-black mt-2 tracking-tight ${balance >= 0 ? 'text-slate-900' : 'text-red-600'}`}>
                 ${balance.toFixed(2)}
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
-              <ArrowUpRight className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">${totalIncome.toFixed(2)}</div>
+
+          <Card className="border-slate-200/80 shadow-sm overflow-hidden bg-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between space-y-0 pb-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Ingresos</p>
+                <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+                  <ArrowUpRight className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="text-2xl font-black mt-2 tracking-tight text-emerald-600">
+                +${totalIncome.toFixed(2)}
+              </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Gastos</CardTitle>
-              <ArrowDownRight className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${isOverBudget ? 'text-red-600 underline decoration-wavy' : 'text-red-600'}`}>
-                ${totalExpenses.toFixed(2)}
+
+          <Card className="border-slate-200/80 shadow-sm overflow-hidden bg-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between space-y-0 pb-1">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Gastos</p>
+                <div className={`p-2 rounded-lg ${isOverBudget ? 'bg-red-100 text-red-700 animate-pulse' : 'bg-rose-50 text-rose-600'}`}>
+                  <ArrowDownRight className="h-4 w-4" />
+                </div>
+              </div>
+              <div className="text-2xl font-black mt-2 tracking-tight text-rose-600">
+                -${totalExpenses.toFixed(2)}
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Formulario */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Agregar Transacción</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Nueva Sección de Entrada de Datos Estilizada */}
+        <Card className="border-slate-200/80 shadow-md bg-white rounded-2xl overflow-hidden">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100 px-6 py-4">
+            <CardTitle className="text-base font-bold text-slate-800">Nueva Operación</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="space-y-5">
+              
+              {/* Fila superior: Descripción */}
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-xs font-bold text-slate-600 tracking-wide flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-slate-400" /> Descripción
+                </Label>
+                <Input
+                  id="description"
+                  placeholder="Ej. Nómina mensual, Compra supermercado..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="border-slate-200 focus-visible:ring-slate-400 h-10 rounded-lg"
+                />
+              </div>
+
+              {/* Fila intermedia: Monto y Categoría */}
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="description">Descripción</Label>
+                  <Label htmlFor="amount" className="text-xs font-bold text-slate-600 tracking-wide flex items-center gap-1.5">
+                    <DollarSign className="h-3.5 w-3.5 text-slate-400" /> Importe ($)
+                  </Label>
                   <Input
-                    id="description"
-                    placeholder="Ej. Supermercado, Sueldo"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="border-slate-200 focus-visible:ring-slate-400 h-10 rounded-lg"
                   />
                 </div>
-                <div className="grid gap-4 grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="amount">Monto ($)</Label>
-                    <Input
-                      id="amount"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Tipo</Label>
-                    <Select value={type} onValueChange={(v: "income" | "expense") => setType(v)}>
-                      <SelectTrigger id="type">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="income">Ingreso</SelectItem>
-                        <SelectItem value="expense">Gasto</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Categoría</Label>
+                  <Label htmlFor="category" className="text-xs font-bold text-slate-600 tracking-wide flex items-center gap-1.5">
+                    <Tag className="h-3.5 w-3.5 text-slate-400" /> Categoría
+                  </Label>
                   <Select value={category} onValueChange={setCategory}>
-                    <SelectTrigger id="category">
-                      <SelectValue placeholder="Selecciona una categoría" />
+                    <SelectTrigger id="category" className="border-slate-200 focus:ring-slate-400 h-10 rounded-lg">
+                      <SelectValue placeholder="Selecciona el rubro" />
                     </SelectTrigger>
                     <SelectContent>
                       {CATEGORIES.map((c) => (
@@ -210,50 +218,75 @@ function Index() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="submit" className="w-full">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Agregar
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+              </div>
 
-          {/* Historial */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Historial</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
-                {transactions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No hay transacciones registradas.
-                  </p>
-                ) : (
-                  transactions.map((t) => (
-                    <div
-                      key={t.id}
-                      className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm"
-                    >
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium leading-none">{t.description}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {t.category} • {t.date}
-                        </p>
-                      </div>
-                      <div
-                        className={`text-sm font-semibold ${
-                          t.type === "income" ? "text-green-600" : "text-red-600"
-                        }`}
-                      >
-                        {t.type === "income" ? "+" : "-"}${t.amount.toFixed(2)}
+              {/* Botones de acción directa requeridos */}
+              <div className="grid gap-3 pt-2 sm:grid-cols-2">
+                <Button 
+                  type="button" 
+                  onClick={() => handleAddTransaction("income")}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-11 rounded-xl transition-all shadow-sm hover:shadow active:scale-[0.99]"
+                >
+                  <ArrowUpRight className="mr-2 h-4 w-4 stroke-[3]" /> Añadir Ingreso
+                </Button>
+                
+                <Button 
+                  type="button" 
+                  onClick={() => handleAddTransaction("expense")}
+                  className="bg-slate-900 hover:bg-slate-800 text-white font-semibold h-11 rounded-xl transition-all shadow-sm hover:shadow active:scale-[0.99]"
+                >
+                  <ArrowDownRight className="mr-2 h-4 w-4 stroke-[3]" /> Añadir Gasto
+                </Button>
+              </div>
+
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Sección de Registro / Historial */}
+        <div className="space-y-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 pl-1">Movimientos Recientes</h2>
+          
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 subtle-scrollbar">
+            {transactions.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200 shadow-inner">
+                <p className="text-sm text-slate-400 font-medium">
+                  No hay transacciones guardadas en esta sesión.
+                </p>
+              </div>
+            ) : (
+              transactions.map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:border-slate-200 transition-all group animate-in fade-in-50 duration-200"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className={`p-2 rounded-xl shrink-0 ${
+                      t.type === "income" ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-600"
+                    }`}>
+                      {t.type === "income" ? <ArrowUpRight className="h-4 w-4 stroke-[2.5]" /> : <ArrowDownRight className="h-4 w-4 stroke-[2.5]" />}
+                    </div>
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-semibold text-slate-800 tracking-tight group-hover:text-slate-900 transition-colors">{t.description}</p>
+                      <div className="flex items-center gap-2 text-xs text-slate-400 font-medium">
+                        <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600 text-[10px] uppercase font-bold tracking-wide">{t.category}</span>
+                        <span>•</span>
+                        <span>{t.date}</span>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  </div>
+                  
+                  <div className={`text-sm font-bold tracking-tight ${
+                    t.type === "income" ? "text-emerald-600" : "text-slate-900"
+                  }`}>
+                    {t.type === "income" ? "+" : "-"}${t.amount.toFixed(2)}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
+
       </div>
     </div>
   );

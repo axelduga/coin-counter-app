@@ -1,650 +1,265 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import {
-  AlertTriangle,
-  ArrowDownLeft,
-  ArrowUpRight,
-  Plus,
-  Trash2,
-  Wallet,
-  TrendingUp,
-  TrendingDown,
-  X,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Settings,
-} from "lucide-react";
-import { useTransactions, type TransactionType } from "@/hooks/use-transactions";
+import { PlusCircle, ArrowUpRight, ArrowDownRight, Wallet, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 
-export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Mi Dinero — Control de Gastos" },
-      { name: "description", content: "Controla tus ingresos y gastos diarios de forma sencilla." },
-      { property: "og:title", content: "Mi Dinero — Control de Gastos" },
-      { property: "og:description", content: "Controla tus ingresos y gastos diarios de forma sencilla." },
-    ],
-  }),
-  component: Index,
-});
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("es-PY", {
-    style: "currency",
-    currency: "PYG",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+interface Transaction {
+  id: string;
+  description: string;
+  amount: number;
+  type: "income" | "expense";
+  category: string;
+  date: string;
 }
 
-function formatDate(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("es-ES", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const CATEGORIES = [
+  "Comida",
+  "Transporte",
+  "Vivienda",
+  "Entretenimiento",
+  "Servicios",
+  "Otros",
+];
 
-function Index() {
-  const {
-    transactions,
-    addTransaction,
-    deleteTransaction,
-    income,
-    expense,
-    balance,
-    budgetLimit,
-    setBudgetLimit,
-    categories,
-    mounted,
-  } = useTransactions();
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalType, setModalType] = useState<TransactionType>("expense");
-  const [amount, setAmount] = useState("");
+export default function Index() {
+  const { toast } = useToast();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [type, setType] = useState<"income" | "expense">("expense");
   const [category, setCategory] = useState("");
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
-  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
-  const [newBudgetLimit, setNewBudgetLimit] = useState(String(budgetLimit));
-  const now = new Date();
-  const [calendarYear, setCalendarYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(now.getMonth());
+  
+  // NUEVO: Estado para controlar el límite de presupuesto (por defecto $500)
+  const [budgetLimit, setBudgetLimit] = useState<number>(500);
 
-  function openModal(type: TransactionType) {
-    setModalType(type);
-    setAmount("");
-    setDescription("");
-    setCategory("");
-    setShowCategoryPicker(false);
-    setModalOpen(true);
-  }
+  const totalIncome = transactions
+    .filter((t) => t.type === "income")
+    .reduce((acc, t) => acc + t.amount, 0);
 
-  function closeModal() {
-    setModalOpen(false);
-  }
+  const totalExpenses = transactions
+    .filter((t) => t.type === "expense")
+    .reduce((acc, t) => acc + t.amount, 0);
 
-  function handleSubmit(e: React.FormEvent) {
+  const balance = totalIncome - totalExpenses;
+
+  // NUEVO: Variable para saber si nos pasamos del presupuesto
+  const isOverBudget = totalExpenses > budgetLimit;
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const val = parseFloat(amount.replace(",", "."));
-    if (!val || val <= 0) return;
-    addTransaction({
-      type: modalType,
-      amount: val,
-      description: description.trim() || (modalType === "income" ? "Ingreso" : "Gasto"),
-      category: category || (modalType === "income" ? "Otros" : "Otros"),
-    });
-    closeModal();
-  }
 
-  const recentTransactions = transactions.slice(0, 50);
+    if (!description || !amount || !category) {
+      toast({
+        title: "Error",
+        description: "Por favor completa todos los campos",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  if (!mounted) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
+    const newTransaction: Transaction = {
+      id: crypto.randomUUID(),
+      description,
+      amount: parseFloat(amount),
+      type,
+      category,
+      date: new Date().toLocaleDateString(),
+    };
 
-  const overBudget = expense > budgetLimit;
+    setTransactions([newTransaction, ...transactions]);
+    setDescription("");
+    setAmount("");
+    setCategory("");
+
+    // NUEVA ALERTA: Si con esta nueva transacción se supera el límite
+    if (type === "expense" && totalExpenses + parseFloat(amount) > budgetLimit) {
+      toast({
+        title: "⚠️ ¡Alerta de Presupuesto!",
+        description: `Has superado tu límite de gastos mensual de $${budgetLimit}`,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Éxito",
+        description: "Transacción agregada correctamente",
+      });
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header / Balance */}
-      <header
-        className={`relative overflow-hidden px-4 pb-10 pt-8 text-primary-foreground transition-colors duration-500 sm:px-6 lg:px-8 ${
-          overBudget ? "bg-expense" : "bg-primary"
-        }`}
-      >
-        <div className="mx-auto max-w-md">
-          <div className="mb-1 flex items-center gap-2 opacity-80">
-            <Wallet className="h-5 w-5" />
-            <span className="text-sm font-medium tracking-wide">TU BALANCE</span>
+    <div className={`min-h-screen p-6 transition-colors duration-500 ${isOverBudget ? 'bg-red-50/50' : 'bg-gray-50/50'}`}>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-gray-900">CoinCounter</h1>
+            <p className="text-muted-foreground">Gestiona tus finanzas de forma simple</p>
           </div>
-          <div className="text-5xl font-extrabold tracking-tight">
-            {formatCurrency(balance)}
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-white/10 p-3 backdrop-blur-sm">
-              <div className="flex items-center gap-1.5 text-sm opacity-80">
-                <TrendingUp className="h-4 w-4" />
-                <span>Ingresos</span>
-              </div>
-              <div className="mt-1 text-lg font-bold">{formatCurrency(income)}</div>
-            </div>
-            <div className="rounded-xl bg-white/10 p-3 backdrop-blur-sm">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-sm opacity-80">
-                  <TrendingDown className="h-4 w-4 shrink-0" />
-                  <span>Gastos</span>
-                  <button
-                    onClick={() => {
-                      setNewBudgetLimit(String(budgetLimit));
-                      setBudgetModalOpen(true);
-                    }}
-                    className="ml-1 rounded p-0.5 text-white/60 hover:bg-white/20 hover:text-white"
-                    aria-label="Configurar presupuesto"
-                    title="Configurar presupuesto"
-                  >
-                    <Settings className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-                {overBudget && (
-                  <div className="flex shrink-0 items-center gap-1 rounded-md bg-white/20 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                    <AlertTriangle className="h-3 w-3" />
-                    <span>Alerta</span>
-                  </div>
-                )}
-              </div>
-              <div className="mt-1 text-lg font-bold">{formatCurrency(expense)}</div>
-              {overBudget && (
-                <div className="mt-1 text-[11px] font-semibold text-red-100">
-                  ¡Cuidado con el presupuesto!
-                </div>
-              )}
-            </div>
+          
+          {/* NUEVO: Control para ajustar el límite de presupuesto */}
+          <div className="flex items-center gap-3 bg-white p-2 rounded-lg border shadow-sm">
+            <Label htmlFor="budget" className="text-xs font-semibold text-gray-600 uppercase">Límite Gastos:</Label>
+            <Input
+              id="budget"
+              type="number"
+              value={budgetLimit}
+              onChange={(e) => setBudgetLimit(Number(e.target.value) || 0)}
+              className="w-24 h-8 text-right font-medium"
+            />
           </div>
         </div>
-      </header>
 
-
-      {/* Action Buttons */}
-      <div className="mx-auto -mt-5 max-w-md px-4 sm:px-6">
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            onClick={() => openModal("income")}
-            className="h-14 gap-2 rounded-2xl bg-income text-white shadow-lg shadow-income/25 hover:bg-income/90"
-          >
-            <ArrowDownLeft className="h-5 w-5" />
-            <span className="text-base font-semibold">Añadir Ingreso</span>
-          </Button>
-          <Button
-            onClick={() => openModal("expense")}
-            className="h-14 gap-2 rounded-2xl bg-expense text-white shadow-lg shadow-expense/25 hover:bg-expense/90"
-          >
-            <ArrowUpRight className="h-5 w-5" />
-            <span className="text-base font-semibold">Añadir Gasto</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Monthly Balance Calendar */}
-      {(() => {
-        const MONTHS = [
-          "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-          "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
-        ];
-        const MONTHS_FULL = [
-          "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-          "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-        ];
-        const monthly = Array.from({ length: 12 }, () => ({ income: 0, expense: 0 }));
-        for (const t of transactions) {
-          const d = new Date(t.date);
-          if (d.getFullYear() !== calendarYear) continue;
-          const m = d.getMonth();
-          if (t.type === "income") monthly[m].income += t.amount;
-          else monthly[m].expense += t.amount;
-        }
-        const selected = selectedMonth !== null ? monthly[selectedMonth] : null;
-        const selectedTxs = selectedMonth !== null
-          ? transactions.filter((t) => {
-              const d = new Date(t.date);
-              return d.getFullYear() === calendarYear && d.getMonth() === selectedMonth;
-            })
-          : [];
-        return (
-          <section className="mx-auto mt-6 max-w-md px-4 sm:px-6">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Balance mensual
-              </h2>
-              <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-0.5">
-                <button
-                  type="button"
-                  onClick={() => setCalendarYear((y) => y - 1)}
-                  className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                  aria-label="Año anterior"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span className="min-w-[3rem] text-center text-sm font-semibold text-foreground">
-                  {calendarYear}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setCalendarYear((y) => y + 1)}
-                  className="rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
-                  aria-label="Año siguiente"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
+        {/* NUEVO BANNER DE ADVERTENCIA: Solo aparece si estás excedido */}
+        {isOverBudget && (
+          <div className="flex items-center gap-3 p-4 bg-red-100 border border-red-200 text-red-800 rounded-xl shadow-sm animate-pulse">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <div>
+              <span className="font-bold">¡Atención!</span> Has gastado <span className="font-bold">${totalExpenses}</span>, superando tu límite establecido de ${budgetLimit}.
             </div>
-
-            <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-card p-3 sm:grid-cols-4">
-              {monthly.map((m, i) => {
-                const bal = m.income - m.expense;
-                const hasData = m.income > 0 || m.expense > 0;
-                const isSelected = selectedMonth === i;
-                const isCurrent =
-                  calendarYear === now.getFullYear() && i === now.getMonth();
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => setSelectedMonth(isSelected ? null : i)}
-                    className={`flex flex-col items-start rounded-xl border p-2 text-left transition-all ${
-                      isSelected
-                        ? "border-primary bg-primary/10 shadow-sm"
-                        : "border-border bg-background hover:border-primary/40"
-                    }`}
-                  >
-                    <div className="flex w-full items-center justify-between">
-                      <span className="text-xs font-semibold text-foreground">
-                        {MONTHS[i]}
-                      </span>
-                      {isCurrent && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      )}
-                    </div>
-                    {hasData ? (
-                      <span
-                        className={`mt-1 text-[11px] font-bold leading-tight ${
-                          bal >= 0 ? "text-income" : "text-expense"
-                        }`}
-                      >
-                        {bal >= 0 ? "+" : "−"}
-                        {formatCurrency(Math.abs(bal))}
-                      </span>
-                    ) : (
-                      <span className="mt-1 text-[11px] text-muted-foreground/60">
-                        Sin datos
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {selected && selectedMonth !== null && (
-              <div className="mt-3 rounded-2xl border border-border bg-card p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-base font-bold text-foreground">
-                    {MONTHS_FULL[selectedMonth]} {calendarYear}
-                  </h3>
-                  <span className="text-xs text-muted-foreground">
-                    {selectedTxs.length} mov.
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-lg bg-income-muted p-2">
-                    <div className="flex items-center gap-1 text-[11px] text-income">
-                      <TrendingUp className="h-3 w-3" />
-                      <span>Ingresos</span>
-                    </div>
-                    <div className="mt-0.5 text-sm font-bold text-foreground">
-                      {formatCurrency(selected.income)}
-                    </div>
-                  </div>
-                  <div className="rounded-lg bg-expense-muted p-2">
-                    <div className="flex items-center gap-1 text-[11px] text-expense">
-                      <TrendingDown className="h-3 w-3" />
-                      <span>Gastos</span>
-                    </div>
-                    <div className="mt-0.5 text-sm font-bold text-foreground">
-                      {formatCurrency(selected.expense)}
-                    </div>
-                  </div>
-                  <div className="rounded-lg bg-muted p-2">
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Wallet className="h-3 w-3" />
-                      <span>Balance</span>
-                    </div>
-                    <div
-                      className={`mt-0.5 text-sm font-bold ${
-                        selected.income - selected.expense >= 0
-                          ? "text-income"
-                          : "text-expense"
-                      }`}
-                    >
-                      {formatCurrency(selected.income - selected.expense)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-        );
-      })()}
-
-      {/* Expense Breakdown by Category */}
-      {(() => {
-        const byCategory = transactions
-          .filter((t) => t.type === "expense")
-          .reduce<Record<string, number>>((acc, t) => {
-            acc[t.category] = (acc[t.category] || 0) + t.amount;
-            return acc;
-          }, {});
-        const entries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
-        if (entries.length === 0) return null;
-        const max = entries[0][1];
-        const palette = [
-          "bg-expense",
-          "bg-orange-500",
-          "bg-amber-500",
-          "bg-yellow-500",
-          "bg-rose-500",
-          "bg-pink-500",
-          "bg-purple-500",
-          "bg-indigo-500",
-        ];
-        return (
-          <section className="mx-auto max-w-md px-4 pt-6 sm:px-6">
-            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Gastos por categoría
-            </h2>
-            <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
-              {entries.map(([cat, amt], i) => {
-                const pct = expense > 0 ? (amt / expense) * 100 : 0;
-                const barPct = max > 0 ? (amt / max) * 100 : 0;
-                return (
-                  <div key={cat}>
-                    <div className="mb-1 flex items-center justify-between text-sm">
-                      <span className="font-medium text-foreground">{cat}</span>
-                      <span className="text-muted-foreground">
-                        <span className="font-semibold text-foreground">
-                          {formatCurrency(amt)}
-                        </span>
-                        <span className="ml-2 text-xs">{pct.toFixed(1)}%</span>
-                      </span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className={`h-full rounded-full ${palette[i % palette.length]} transition-all`}
-                        style={{ width: `${barPct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-              <div className="mt-2 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
-                <span>Categoría con más gasto</span>
-                <span className="font-semibold text-expense">{entries[0][0]}</span>
-              </div>
-            </div>
-          </section>
-        );
-      })()}
-
-      {/* Transactions List */}
-      <main className="mx-auto max-w-md px-4 py-6 sm:px-6">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Movimientos recientes
-        </h2>
-        {recentTransactions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-12 text-center">
-            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <Plus className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <p className="text-sm font-medium text-muted-foreground">
-              Sin movimientos todavía
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground/70">
-              Toca un botón para registrar tu primer ingreso o gasto
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {recentTransactions.map((tx) => (
-              <div
-                key={tx.id}
-                className="group flex items-center gap-3 rounded-xl border border-border bg-card p-3 transition-colors hover:bg-accent/40"
-              >
-                <div
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-                    tx.type === "income"
-                      ? "bg-income-muted text-income"
-                      : "bg-expense-muted text-expense"
-                  }`}
-                >
-                  {tx.type === "income" ? (
-                    <ArrowDownLeft className="h-5 w-5" />
-                  ) : (
-                    <ArrowUpRight className="h-5 w-5" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium text-foreground">
-                    {tx.description}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
-                      {tx.category}
-                    </span>
-                    <span>{formatDate(tx.date)}</span>
-                  </div>
-                </div>
-                <div
-                  className={`shrink-0 text-right text-sm font-bold ${
-                    tx.type === "income" ? "text-income" : "text-expense"
-                  }`}
-                >
-                  {tx.type === "income" ? "+" : "-"}
-                  {formatCurrency(tx.amount)}
-                </div>
-                <button
-                  onClick={() => deleteTransaction(tx.id)}
-                  className="shrink-0 rounded-lg p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-                  aria-label="Eliminar"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
           </div>
         )}
-      </main>
 
-      {/* Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={closeModal}
-          />
-          <div className="relative z-10 w-full max-w-md rounded-t-2xl bg-card p-5 shadow-2xl sm:rounded-2xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-foreground">
-                {modalType === "income" ? "Nuevo Ingreso" : "Nuevo Gasto"}
-              </h3>
-              <button
-                onClick={closeModal}
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+        {/* Tarjetas de Resumen */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Balance Total</CardTitle>
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                ${balance.toFixed(2)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Ingresos</CardTitle>
+              <ArrowUpRight className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">${totalIncome.toFixed(2)}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Gastos</CardTitle>
+              <ArrowDownRight className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${isOverBudget ? 'text-red-600 underline decoration-wavy' : 'text-red-600'}`}>
+                ${totalExpenses.toFixed(2)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="amount" className="mb-1.5 block text-sm font-medium">
-                  Cantidad
-                </Label>
-                <div className="relative">
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Formulario */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Agregar Transacción</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="description">Descripción</Label>
                   <Input
-                    id="amount"
-                    type="number"
-                    step="1"
-                    min="1"
-                    placeholder="0"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    required
-                    autoFocus
-                    className="h-12 text-lg"
+                    id="description"
+                    placeholder="Ej. Supermercado, Sueldo"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
-                    Gs.
-                  </span>
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="description" className="mb-1.5 block text-sm font-medium">
-                  Concepto
-                </Label>
-                <Input
-                  id="description"
-                  type="text"
-                  placeholder="Ej: Compra supermercado"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="h-11"
-                />
-              </div>
-
-              <div className="relative">
-                <Label className="mb-1.5 block text-sm font-medium">Categoría</Label>
-                <button
-                  type="button"
-                  onClick={() => setShowCategoryPicker(!showCategoryPicker)}
-                  className="flex h-11 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 text-sm text-foreground hover:bg-accent"
-                >
-                  <span>{category || "Selecciona una categoría"}</span>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                </button>
-                {showCategoryPicker && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setShowCategoryPicker(false)}
+                <div className="grid gap-4 grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="amount">Monto ($)</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
                     />
-                    <div className="absolute z-50 mt-1 max-h-52 w-full overflow-auto rounded-lg border border-border bg-popover p-1 shadow-lg">
-                      {categories[modalType].map((cat) => (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => {
-                            setCategory(cat);
-                            setShowCategoryPicker(false);
-                          }}
-                          className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                            category === cat
-                              ? "bg-primary text-primary-foreground"
-                              : "hover:bg-accent"
-                          }`}
-                        >
-                          {cat}
-                        </button>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="type">Tipo</Label>
+                    <Select value={type} onValueChange={(v: "income" | "expense") => setType(v)}>
+                      <SelectTrigger id="type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="income">Ingreso</SelectItem>
+                        <SelectItem value="expense">Gasto</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">Categoría</Label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger id="category">
+                      <SelectValue placeholder="Selecciona una categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" className="w-full">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Agregar
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Historial */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Historial</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
+                {transactions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No hay transacciones registradas.
+                  </p>
+                ) : (
+                  transactions.map((t) => (
+                    <div
+                      key={t.id}
+                      className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm"
+                    >
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium leading-none">{t.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t.category} • {t.date}
+                        </p>
+                      </div>
+                      <div
+                        className={`text-sm font-semibold ${
+                          t.type === "income" ? "text-green-600" : "text-red-600"
+                        }`}
+                      >
+                        {t.type === "income" ? "+" : "-"}${t.amount.toFixed(2)}
+                      </div>
                     </div>
-                  </>
+                  ))
                 )}
               </div>
-
-              <Button
-                type="submit"
-                className={`h-12 w-full rounded-xl text-base font-bold ${
-                  modalType === "income"
-                    ? "bg-income hover:bg-income/90"
-                    : "bg-expense hover:bg-expense/90"
-                }`}
-              >
-                {modalType === "income" ? "Registrar Ingreso" : "Registrar Gasto"}
-              </Button>
-            </form>
-          </div>
+            </CardContent>
+          </Card>
         </div>
-      )}
-
-      {/* Budget Limit Modal */}
-      {budgetModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setBudgetModalOpen(false)}
-          />
-          <div className="relative z-10 w-full max-w-md rounded-t-2xl bg-card p-5 shadow-2xl sm:rounded-2xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-foreground">Configurar alerta de presupuesto</h3>
-              <button
-                onClick={() => setBudgetModalOpen(false)}
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const val = parseInt(newBudgetLimit.replace(/\./g, "").replace(",", ""), 10);
-                if (val && val > 0) {
-                  setBudgetLimit(val);
-                  setBudgetModalOpen(false);
-                }
-              }}
-              className="space-y-4"
-            >
-              <div>
-                <Label htmlFor="budgetLimit" className="mb-1.5 block text-sm font-medium">
-                  Límite de gastos (Gs.)
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="budgetLimit"
-                    type="number"
-                    step="1"
-                    min="1"
-                    placeholder="500000"
-                    value={newBudgetLimit}
-                    onChange={(e) => setNewBudgetLimit(e.target.value)}
-                    required
-                    autoFocus
-                    className="h-12 text-lg"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
-                    Gs.
-                  </span>
-                </div>
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  Se mostrará una alerta cuando tus gastos superen este monto.
-                </p>
-              </div>
-              <Button type="submit" className="h-12 w-full rounded-xl bg-primary text-base font-bold hover:bg-primary/90">
-                Guardar límite
-              </Button>
-            </form>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
+Añadida alerta de presupuesto

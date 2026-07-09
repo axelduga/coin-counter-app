@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+// CAMBIO: Ahora usamos Sonner (toast) que ya está instalado en tu app
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -31,7 +32,6 @@ const CATEGORIES = [
 ];
 
 function Index() {
-  const { toast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -58,11 +58,7 @@ function Index() {
     e.preventDefault();
 
     if (!description || !amount || !category) {
-      toast({
-        title: "Error",
-        description: "Por favor completa todos los campos",
-        variant: "destructive",
-      });
+      toast.error("Por favor completa todos los campos");
       return;
     }
 
@@ -82,18 +78,11 @@ function Index() {
     setAmount("");
     setCategory("");
 
-    // ALERTA: Si con esta nueva transacción se supera el límite
+    // ALERTA REVISADA CON SONNER
     if (type === "expense" && totalExpenses + currentAmount > budgetLimit) {
-      toast({
-        title: "⚠️ ¡Alerta de Presupuesto!",
-        description: `Has superado tu límite de gastos mensual de $${budgetLimit}`,
-        variant: "destructive",
-      });
+      toast.error(`⚠️ ¡Alerta de Presupuesto! Has superado tu límite mensual de $${budgetLimit}`);
     } else {
-      toast({
-        title: "Éxito",
-        description: "Transacción agregada correctamente",
-      });
+      toast.success("Transacción agregada correctamente");
     }
   };
 

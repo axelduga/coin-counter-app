@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import {
+  AlertTriangle,
   ArrowDownLeft,
   ArrowUpRight,
   Plus,

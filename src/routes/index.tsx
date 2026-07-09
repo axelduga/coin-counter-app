@@ -140,6 +140,15 @@ function Index() {
         </div>
       </header>
 
+      {overBudget && (
+        <div className="mx-auto max-w-md px-4 pt-3 sm:px-6">
+          <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 shadow-sm dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+            <AlertTriangle className="h-5 w-5 shrink-0" />
+            <span className="text-sm font-semibold">¡Cuidado con el presupuesto!</span>
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="mx-auto -mt-5 max-w-md px-4 sm:px-6">
         <div className="grid grid-cols-2 gap-3">

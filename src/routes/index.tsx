@@ -29,9 +29,11 @@ export const Route = createFileRoute("/")({
 });
 
 function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("es-ES", {
+  return new Intl.NumberFormat("es-PY", {
     style: "currency",
-    currency: "EUR",
+    currency: "PYG",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(amount);
 }
 
@@ -249,9 +251,9 @@ function Index() {
                   <Input
                     id="amount"
                     type="number"
-                    step="0.01"
-                    min="0.01"
-                    placeholder="0,00"
+                    step="1"
+                    min="1"
+                    placeholder="0"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     required
@@ -259,7 +261,7 @@ function Index() {
                     className="h-12 text-lg"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
-                    €
+                    Gs.
                   </span>
                 </div>
               </div>

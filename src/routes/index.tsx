@@ -73,6 +73,9 @@ function Index() {
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [newBudgetLimit, setNewBudgetLimit] = useState(String(budgetLimit));
+  const now = new Date();
+  const [calendarYear, setCalendarYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(now.getMonth());
 
   function openModal(type: TransactionType) {
     setModalType(type);

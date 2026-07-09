@@ -190,6 +190,65 @@ function Index() {
         </div>
       </div>
 
+      {/* Expense Breakdown by Category */}
+      {(() => {
+        const byCategory = transactions
+          .filter((t) => t.type === "expense")
+          .reduce<Record<string, number>>((acc, t) => {
+            acc[t.category] = (acc[t.category] || 0) + t.amount;
+            return acc;
+          }, {});
+        const entries = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+        if (entries.length === 0) return null;
+        const max = entries[0][1];
+        const palette = [
+          "bg-expense",
+          "bg-orange-500",
+          "bg-amber-500",
+          "bg-yellow-500",
+          "bg-rose-500",
+          "bg-pink-500",
+          "bg-purple-500",
+          "bg-indigo-500",
+        ];
+        return (
+          <section className="mx-auto max-w-md px-4 pt-6 sm:px-6">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Gastos por categoría
+            </h2>
+            <div className="space-y-3 rounded-2xl border border-border bg-card p-4">
+              {entries.map(([cat, amt], i) => {
+                const pct = expense > 0 ? (amt / expense) * 100 : 0;
+                const barPct = max > 0 ? (amt / max) * 100 : 0;
+                return (
+                  <div key={cat}>
+                    <div className="mb-1 flex items-center justify-between text-sm">
+                      <span className="font-medium text-foreground">{cat}</span>
+                      <span className="text-muted-foreground">
+                        <span className="font-semibold text-foreground">
+                          {formatCurrency(amt)}
+                        </span>
+                        <span className="ml-2 text-xs">{pct.toFixed(1)}%</span>
+                      </span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={`h-full rounded-full ${palette[i % palette.length]} transition-all`}
+                        style={{ width: `${barPct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="mt-2 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
+                <span>Categoría con más gasto</span>
+                <span className="font-semibold text-expense">{entries[0][0]}</span>
+              </div>
+            </div>
+          </section>
+        );
+      })()}
+
       {/* Transactions List */}
       <main className="mx-auto max-w-md px-4 py-6 sm:px-6">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">

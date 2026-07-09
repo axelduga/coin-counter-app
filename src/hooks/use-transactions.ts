@@ -61,6 +61,7 @@ function saveBudgetLimit(limit: number) {
 
 export function useTransactions() {
   const [transactions, setTransactions] = useState<Transaction[]>(loadTransactions);
+  const [budgetLimit, setBudgetLimitState] = useState<number>(loadBudgetLimit);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {

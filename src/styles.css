@@ -140,6 +140,10 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+  --income: oklch(0.7 0.12 145);
+  --income-muted: oklch(0.25 0.04 145);
+  --expense: oklch(0.65 0.18 25);
+  --expense-muted: oklch(0.25 0.04 25);
 }
 
 @layer base {
